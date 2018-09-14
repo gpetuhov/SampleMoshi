@@ -69,15 +69,19 @@ class MainActivity : AppCompatActivity() {
                     )
                     .build()
 
+            // To use Moshi converter with Retrofit in Kotlin, we have 2 options:
+            // 1. Use reflection
+            // In this case add converter like this:
+            // .addConverterFactory(MoshiConverterFactory.create(Moshi.Builder().add(KotlinJsonAdapterFactory()).build()))
+            // 2. Use code generation
+            // In this case add converter simply like this
+            // .addConverterFactory(MoshiConverterFactory.create())
+            // And also add @JsonClass(generateAdapter = true) to Kotlin classes.
+            // In this example we will use the second option.
             val retrofit = Retrofit.Builder()
                     .client(okHttpClient)
                     .baseUrl("https://earthquake.usgs.gov/fdsnws/event/1/")
-
-                    // We must add Moshi converter factory like this.
-                    // Simply adding .addConverterFactory(MoshiConverterFactory.create())
-                    // doesn't work!
-                    .addConverterFactory(MoshiConverterFactory.create(Moshi.Builder().add(KotlinJsonAdapterFactory()).build()))
-
+                    .addConverterFactory(MoshiConverterFactory.create())
                     .build()
 
             val quakeService = retrofit.create(QuakeService::class.java)
