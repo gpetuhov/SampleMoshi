@@ -6,6 +6,14 @@ import com.gpetuhov.android.samplemoshi.model.User
 import kotlinx.android.synthetic.main.activity_main.*
 import com.squareup.moshi.Moshi
 import org.jetbrains.anko.toast
+import retrofit2.Retrofit
+import retrofit2.converter.moshi.MoshiConverterFactory
+import com.gpetuhov.android.samplemoshi.retrofit.QuakeService
+import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
+import kotlinx.coroutines.*
+import kotlinx.coroutines.android.Main
+import okhttp3.logging.HttpLoggingInterceptor
+import okhttp3.OkHttpClient
 
 
 class MainActivity : AppCompatActivity() {
@@ -50,6 +58,41 @@ class MainActivity : AppCompatActivity() {
             toast(user2?.name ?: "null")
 
             true
+        }
+
+        button.setOnClickListener {
+            val okHttpClient = OkHttpClient.Builder()
+                    .addNetworkInterceptor(
+                            HttpLoggingInterceptor().setLevel(
+                                    HttpLoggingInterceptor.Level.BASIC
+                            )
+                    )
+                    .build()
+
+            val retrofit = Retrofit.Builder()
+                    .client(okHttpClient)
+                    .baseUrl("https://earthquake.usgs.gov/fdsnws/event/1/")
+
+                    // We must add Moshi converter factory like this.
+                    // Simply adding .addConverterFactory(MoshiConverterFactory.create())
+                    // doesn't work!
+                    .addConverterFactory(MoshiConverterFactory.create(Moshi.Builder().add(KotlinJsonAdapterFactory()).build()))
+
+                    .build()
+
+            val quakeService = retrofit.create(QuakeService::class.java)
+
+            // In Kotlin 1.3 we should start coroutines like this
+            GlobalScope.launch(Dispatchers.Default, CoroutineStart.DEFAULT, null, {
+                val result = quakeService.getQuakes("geojson", "10").execute()
+
+                launch(Dispatchers.Main) {
+                    val quakeResult = result.body()
+                    val recentQuakeLocation = quakeResult?.quakeList?.firstOrNull()?.quakeProperties?.location
+
+                    toast(recentQuakeLocation ?: "Error downloading quakes")
+                }
+            })
         }
     }
 }
